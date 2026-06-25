@@ -2,6 +2,7 @@ package llmintro.experiment
 
 import llmintro.client.AnthropicClient
 import llmintro.util.hr
+import llmintro.util.prompt
 
 /** 실험 1 — temperature 0/0.3/0.7/1.0, 각 3회 → 같은 temp 내 변동 비교 */
 class Exp1Temperature : Experiment {
@@ -10,11 +11,11 @@ class Exp1Temperature : Experiment {
 
     override fun run(client: AnthropicClient, options: List<String>) {
         hr("exp1  temperature 0/0.3/0.7/1.0 (각 3회)")
-        val prompt = "가을을 딱 두 단어로 표현해줘. 단어만."
+        val question = prompt("질문을 입력하세요.", default = "가을을 딱 두 단어로 표현해줘. 단어만.")
         for (temp in listOf(0.0, 0.3, 0.7, 1.0)) {
             println("\n[temperature=$temp]")
             repeat(3) { i ->
-                val r = client.ask(prompt, maxTokens = 32, temperature = temp)
+                val r = client.ask(question, maxTokens = 32, temperature = temp)
                 println("  ${i + 1}) ${r.text().replace("\n", " ").trim()}")
             }
         }

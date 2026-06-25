@@ -3,6 +3,7 @@ package llmintro.experiment
 import llmintro.client.AnthropicClient
 import llmintro.config.AnthropicConfig
 import llmintro.util.hr
+import llmintro.util.prompt
 import llmintro.util.usageLine
 
 /** 실험 2 — 가짜 메서드 질문 → 환각 관찰. options[0] 에 비교 모델 ID 가능 */
@@ -12,7 +13,7 @@ class Exp2Hallucination : Experiment {
 
     override fun run(client: AnthropicClient, options: List<String>) {
         hr("exp2  환각 관찰 (존재하지 않는 메서드)")
-        val prompt = "Kotlin String 의 reverseAllWords() 메서드 사용법을 코드로 알려줘."
+        val question = prompt("질문을 입력하세요.", default = "Kotlin String 의 reverseAllWords() 메서드 사용법을 코드로 알려줘.")
         val altModel = options.firstOrNull()
 
         val models = buildList {
@@ -21,7 +22,7 @@ class Exp2Hallucination : Experiment {
         }
         for (m in models) {
             println("\n[model=$m]")
-            val r = client.ask(prompt, model = m, maxTokens = 256)
+            val r = client.ask(question, model = m, maxTokens = 256)
             println(r.text().trim())
             println(usageLine(r))
         }

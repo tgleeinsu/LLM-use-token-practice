@@ -3,6 +3,7 @@ package llmintro.experiment
 import llmintro.client.AnthropicClient
 import llmintro.model.Msg
 import llmintro.util.hr
+import llmintro.util.promptLines
 
 /** 실험 4 — 멀티턴 수동 누적 → 매 턴 history 통째 전송, input_tokens 누적 관찰 */
 class Exp4Accumulation : Experiment {
@@ -11,10 +12,13 @@ class Exp4Accumulation : Experiment {
 
     override fun run(client: AnthropicClient, options: List<String>) {
         hr("exp4  멀티턴 누적 (stateless 누적 = tool_use 와 동일 원리)")
-        val turns = listOf(
-            "내 이름은 보라야.",
-            "나는 고양이를 좋아해.",
-            "내 이름이 뭐였지?",
+        val turns = promptLines(
+            "턴마다 보낼 user 메시지를 입력하세요.",
+            default = listOf(
+                "내 이름은 보라야.",
+                "나는 고양이를 좋아해.",
+                "내 이름이 뭐였지?",
+            ),
         )
         val history = mutableListOf<Msg>()
         turns.forEachIndexed { i, user ->

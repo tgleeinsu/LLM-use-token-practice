@@ -2,6 +2,8 @@ package llmintro.experiment
 
 import llmintro.client.AnthropicClient
 import llmintro.util.hr
+import llmintro.util.prompt
+import llmintro.util.promptInt
 
 /** 실험 3 — 짧은 입력 vs 긴 잡음+입력 → input_tokens 배수 차이 */
 class Exp3Context : Experiment {
@@ -10,9 +12,11 @@ class Exp3Context : Experiment {
 
     override fun run(client: AnthropicClient, options: List<String>) {
         hr("exp3  컨텍스트 비용 (짧은 입력 vs 긴 잡음+입력)")
-        val shortMsg = "안녕?"
-        val noise = "이것은 의미 없는 긴 잡음 문장입니다. ".repeat(200)
-        val longMsg = noise + "\n\n안녕?"
+        val shortMsg = prompt("질문(짧은 입력)을 입력하세요.", default = "안녕?")
+        val noiseUnit = prompt("앞에 붙일 잡음 문장을 입력하세요.", default = "이것은 의미 없는 긴 잡음 문장입니다. ")
+        val repeatCount = promptInt("잡음 문장을 몇 번 반복할까요?", default = 200)
+        val noise = noiseUnit.repeat(repeatCount)
+        val longMsg = noise + "\n\n" + shortMsg
 
         val a = client.ask(shortMsg, maxTokens = 32)
         val b = client.ask(longMsg, maxTokens = 32)
