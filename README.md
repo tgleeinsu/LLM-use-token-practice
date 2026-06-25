@@ -71,3 +71,96 @@
 
 **1주차(LLM 기초) → tool_use → MCP/실제 호스트** 순서.
 `messages` 누적을 손으로 겪어두면 tool_use가 훨씬 쉽다.
+
+---
+
+## 🗺️ 코드 플로우
+
+### 전체 실행 흐름
+
+```
+                         ┌─────────────────────────────┐
+   ./gradlew run         │          main(args)         │   Main.kt
+   --args="exp0"  ──────▶│  진입점: 인자 파싱 → 디스패치  │
+                         └──────────────┬──────────────┘
+                                        │
+                ┌───────────────────────┼───────────────────────┐
+                ▼                       ▼                        ▼
+        ┌───────────────┐      ┌────────────────┐       ┌────────────────┐
+        │ command 없음   │      │ -h/--help/help │       │  실제 커맨드     │
+        │  printUsage() │      │  printUsage()  │       │ (exp0~exp4/all)│
+        └───────────────┘      └────────────────┘       └───────┬────────┘
+                                                                │
+                                          ┌─────────────────────┘
+                                          ▼
+                              ┌───────────────────────┐
+                              │   loadKeyOrExit()     │   ApiKeyLoader.kt
+                              │  env > .env 순서로 키  │
+                              └───────────┬───────────┘
+                                          │ 키 없으면
+                                          │ MissingApiKeyException → exit(1)
+                                          ▼
+                              ┌───────────────────────┐
+                              │   AnthropicClient(key)│   client/AnthropicClient.kt
+                              └───────────┬───────────┘
+                                          │
+                ┌─────────────────────────┴─────────────────────────┐
+                │ command == "all"                  else             │
+                ▼                                    ▼
+   ┌──────────────────────────┐        ┌────────────────────────────┐
+   │ ExperimentRegistry.all   │        │ ExperimentRegistry         │
+   │  .forEach { it.run() }   │        │   .byCommand(command)      │   ExperimentRegistry.kt
+   │  exp0~exp4 순차 실행      │        │   → 매칭된 Experiment.run() │
+   └─────────────┬────────────┘        └──────────────┬─────────────┘
+                 └────────────────┬───────────────────┘
+                                  ▼
+                    ┌──────────────────────────┐
+                    │   Experiment.run(client) │   experiment/Exp*.kt
+                    │   exp0 입력→출력+usage     │   (Experiment 인터페이스 구현 5개)
+                    │   exp1 temperature 비교   │
+                    │   exp2 환각 관찰          │
+                    │   exp3 컨텍스트 토큰 비교  │
+                    │   exp4 messages 누적      │
+                    └─────────────┬────────────┘
+                                  │ client.ask() / client.create()
+                                  ▼
+                    ┌──────────────────────────┐
+                    │  CreateReq 직렬화(JSON)   │   model/Messages.kt
+                    │  model/messages/system/  │
+                    │  max_tokens/temperature  │
+                    └─────────────┬────────────┘
+                                  │ HTTP POST (OkHttp)
+                                  ▼
+                    ┌──────────────────────────┐
+                    │   Anthropic Messages API │   (외부)
+                    │   POST /v1/messages      │
+                    └─────────────┬────────────┘
+                                  │ 200 → 응답 / 비-200 → error(바디 노출)
+                                  ▼
+                    ┌──────────────────────────┐
+                    │  CreateResp 역직렬화      │   model/Messages.kt
+                    │  content[].text / usage  │
+                    └─────────────┬────────────┘
+                                  ▼
+                    ┌──────────────────────────┐
+                    │  Output 포맷 → 콘솔 출력   │   util/Output.kt
+                    │  hr() / usageLine()      │
+                    └──────────────────────────┘
+```
+
+### 책임 분리 (레이어)
+
+```
+ 진입/제어   Main.kt ───────────── 인자 파싱, 디스패치, 키 로딩 트리거
+                │
+ 설정/인증   config/ ───────────── ApiKeyLoader(키), AnthropicConfig(모델·URL·버전)
+                │
+ 실험        experiment/ ───────── Experiment 인터페이스 + Exp0~4 + Registry
+                │                   ("무엇을 실험하나"만 담당)
+                │
+ 호출        client/ ───────────── AnthropicClient: HTTP·직렬화만 책임
+                │
+ 데이터      model/ ────────────── CreateReq / CreateResp / Msg / Usage (JSON 모양)
+                │
+ 표현        util/ ─────────────── Output: 콘솔 출력 포맷 (hr, usageLine)
+```
