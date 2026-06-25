@@ -45,7 +45,7 @@
 
 ---
 
-## 🧪 실험 4개 (`dart run llm_intro.dart`)
+## 🧪 실험 4개
 
 > 키는 환경변수로: `export ANTHROPIC_API_KEY="sk-ant-..."`
 > 
