@@ -27,7 +27,7 @@ class AnthropicClient(private val apiKey: String) {
     fun create(
         messages: List<Msg>,
         model: String = AnthropicConfig.DEFAULT_MODEL,
-        maxTokens: Int = 256,
+        maxTokens: Int = 1024,
         system: String? = null,
         temperature: Double? = null,
     ): CreateResp {
